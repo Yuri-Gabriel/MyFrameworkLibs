@@ -1,0 +1,13 @@
+{
+    "name": "yurigabriel/myframeworklibs",
+    "type": "library",
+    "description": "Minhas bibliotecas e classes reutilizáveis.",
+    "autoload": {
+        "psr-4": {
+            "Framework\\": ""
+        }
+    },
+    "require": {
+        "php": ">=8.0"
+    }
+}
