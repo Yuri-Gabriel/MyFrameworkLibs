@@ -3,10 +3,7 @@
 namespace Framework\Kernel;
 
 use Framework\Libs\Http\Mapping;
-use Framework\Libs\Http\HTTP_STATUS;
 use ReflectionClass;
-use ReflectionMethod;
-use TypeError;
 
 require_once dirname(__DIR__) . "/vendor/autoload.php";
 

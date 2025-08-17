@@ -3,6 +3,8 @@
 namespace Framework\Kernel;
 
 use Framework\Libs\Http\HTTP_STATUS;
+use Framework\Libs\Http\Request;
+use Framework\Libs\RequestException;
 use ReflectionMethod;
 use TypeError;
 
@@ -37,33 +39,44 @@ class RequestListener {
             );
         }
 
-        
-        $listener = $this->listeners[$request_method];
-        $this->$listener();
-    }
-
-    private function listemGET(): void {
         try {
-            $params = $this->getURIParams(
-                $this->currentRouteMethod->params
-            );
-
-            $controllerName = $this->currentRouteMethod->controller;
-            $controller = new $controllerName();
-
-            $methodName = $this->currentRouteMethod->method;
-
-            $ref = new ReflectionMethod($controller, $methodName);
-            
-            $ref->invokeArgs($controller, $params);
+            $listener = $this->listeners[$request_method];
+            $this->$listener();
         } catch (TypeError $err) {
             http_response_code(HTTP_STATUS::BAD_REQUEST);
             echo $err->getMessage();
         }
     }
 
-    private function listemPOST(): void {
+    private function listemGET(): void {
+        $params = $this->getURIParams(
+            $this->currentRouteMethod->params
+        );
 
+        $controllerName = $this->currentRouteMethod->controller;
+        $controller = new $controllerName();
+
+        $methodName = $this->currentRouteMethod->method;
+
+        $ref = new ReflectionMethod($controller, $methodName);
+        
+        $ref->invokeArgs($controller, $params);
+    }
+
+    private function listemPOST(): void {
+        // Criar a captura de parâmetros do tipo: https://site.com/{value}
+        $params = $this->getBody(
+            $this->currentRouteMethod->params
+        );
+
+        $controllerName = $this->currentRouteMethod->controller;
+        $controller = new $controllerName();
+
+        $methodName = $this->currentRouteMethod->method;
+
+        $ref = new ReflectionMethod($controller, $methodName);
+        
+        $ref->invokeArgs($controller, $params);
     }
 
     private function listemPUT(): void {
@@ -74,10 +87,22 @@ class RequestListener {
 
     }
 
-    private function getURIParams(array $method_params) {
+    private function getURIParams(array $method_params): array {
         $params = [];
         foreach($method_params as $param) {
             $params[$param->name] = $_GET[$param->name] ?? null;
+        }
+        return $params;
+    }
+
+    private function getBody(array $method_params): array {
+        $params = [];
+        foreach($method_params as $param) {
+            if(str_contains($param->getType(), "Request")) {
+                $params[$param->name] = new Request();
+            } else {
+                $params[$param->name] = $_GET[$param->name] ?? null;
+            }
         }
         return $params;
     }
