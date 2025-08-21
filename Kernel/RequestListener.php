@@ -4,7 +4,7 @@ namespace Framework\Kernel;
 
 use Framework\Libs\Http\HTTP_STATUS;
 use Framework\Libs\Http\Request;
-use Framework\Libs\RequestException;
+use Framework\Libs\Http\RequestException;
 use ReflectionMethod;
 use TypeError;
 
