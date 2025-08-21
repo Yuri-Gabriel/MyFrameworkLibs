@@ -25,76 +25,82 @@ class RequestListener {
     }
 
     public function dispatch() {
-        $this->currentRouteMethod = $this->getCurrentRouteMethod($this->routes, $this->uri);
+        try {
+            $this->currentRouteMethod = $this->getCurrentRouteMethod($this->routes, $this->uri);
 
-        $this->getIntegredParameter();
-
-        // if ($this->currentRouteMethod == null) {
-        //     throw new RequestException("Route " . $_SERVER["REQUEST_URI"] . " not found", HTTP_STATUS::NOT_FOUND);
-        // }
-
-        // $request_method = $_SERVER["REQUEST_METHOD"];
-        // if ($request_method != $this->currentRouteMethod->http_method) {
-        //     throw new RequestException(
-        //         "The method $request_method is not acceptable in route " . $this->uri,
-        //         HTTP_STATUS::UNAUTHORIZED
-        //     );
-        // }
-
-        // try {
-        //     $listener = $this->listeners[$request_method];
-        //     $this->$listener();
-        // } catch (TypeError $err) {
-        //     http_response_code(HTTP_STATUS::BAD_REQUEST);
-        //     echo $err->getMessage();
-        // }
-    }
-
-    private function getIntegredParameter() {
-        $countOpenKey = 0;
-        $countCloseKey = 0;
-        foreach($this->routes as $k => $v) {
-            if(str_contains($k, "{") || str_contains($k, "}")) {
-                $pathArray = str_split($k);
-                foreach($pathArray as $char) {
-                    if($char == "{") {
-                        $countOpenKey++;
-                    } else if ($char == "}") {
-                        $countCloseKey++;
-                    }
-                }
-                if($countOpenKey != $countCloseKey) {
-                    throw new RequestException(
-                        "Invalid path: " . $k,
-                        HTTP_STATUS::BAD_REQUEST
-                    );
-                }
-                // Verificar de a $this->uri, rota atual, dar match com a rota $k
-                $params = [];
-                for($i = 0; $i < count($pathArray); $i++) {
-                    if($pathArray[$i] == "{" && ($pathArray[$i + 1] != "{" || $pathArray[$i + 1] != "}")) {
-                        $closeKeyPost = strpos(implode('', $pathArray), '}') + 1;
-                        $i++;
-                        $paramName = "";
-                        for($j = $i; $j < $closeKeyPost; $j++) {
-                            if($pathArray[$j] != "}") {
-                                $paramName .= $pathArray[$j];
-                            }
-                            
-                        }
-                        $params[] = trim($paramName);
-                    }
-                    $pathArray[$i > 0 ? $i - 1 : $i] = ' ';
-                }
-                
+            if ($this->currentRouteMethod == null) {
+                throw new RequestException("Route " . $_SERVER["REQUEST_URI"] . " not found", HTTP_STATUS::NOT_FOUND);
             }
+
+            $request_method = $_SERVER["REQUEST_METHOD"];
+            if ($request_method != $this->currentRouteMethod->http_method) {
+                throw new RequestException(
+                    "The method $request_method is not acceptable in route " . $this->uri,
+                    HTTP_STATUS::UNAUTHORIZED
+                );
+            }
+
+            $listener = $this->listeners[$request_method];
+            $rou = $this->getIntegredParameter();
+            $this->$listener($rou[1]);
+        } catch (RequestException $err) {
+            echo json_encode([
+                "message" => $err->getMessage()
+            ]);
+        }  catch (TypeError $err) {
+            http_response_code(HTTP_STATUS::BAD_REQUEST);
+            echo json_encode([
+                "message" => $err->getMessage()
+            ]);
         }
     }
 
-    private function listemGET(): void {
+    private function getIntegredParameter(): array | null {
+        $this->sortRoutes();
+        foreach($this->routes as $handler) {
+            $regex = $this->createRegexFromRoute($handler->path);
+            if (preg_match($regex, $this->uri, $matches)) {
+                array_shift($matches);
+                
+                $paramNames = $this->getParamNames($handler->path);
+                
+                $params = array_combine($paramNames, $matches);
+                
+                return [$handler->path, $params];
+            }
+        }
+        return null;
+    }
+
+    private function sortRoutes() {
+        uasort($this->routes, function ($route1, $route2) {
+            $literalParts1 = substr_count($route1->path, '/') - substr_count($route1->path, '{');
+            $literalParts2 = substr_count($route2->path, '/') - substr_count($route2->path, '{');
+            
+            return $literalParts2 - $literalParts1;
+        });
+    }
+
+    private function createRegexFromRoute(string $route) {
+        $tempRoute = preg_replace('/\{[A-Za-z0-9_]+\}/', '__PARAM__', $route);
+        $escapedRoute = preg_quote($tempRoute, '~');
+        $regex = str_replace('__PARAM__', '([^/]+)', $escapedRoute);
+
+        return "~^" . $regex . "$~";
+    }
+
+    private function getParamNames(string $route) {
+        preg_match_all('/\{([A-Za-z0-9_]+)\}/', $route, $matches);
+        return $matches[1];
+    }
+
+    private function listemGET(array $incorporedParams): void {
+
         $params = $this->getURIParams(
             $this->currentRouteMethod->params
         );
+
+        $params = array_merge($params, $incorporedParams);
 
         $controllerName = $this->currentRouteMethod->controller;
         $controller = new $controllerName();
@@ -106,8 +112,7 @@ class RequestListener {
         $ref->invokeArgs($controller, $params);
     }
 
-    private function listemPOST(): void {
-        // Criar a captura de parâmetros do tipo: https://site.com/{value}
+    private function listemPOST(array $incorporedParams): void {
         $params = $this->getBody(
             $this->currentRouteMethod->params
         );
@@ -122,11 +127,11 @@ class RequestListener {
         $ref->invokeArgs($controller, $params);
     }
 
-    private function listemPUT(): void {
+    private function listemPUT(array $incorporedParams): void {
 
     }
 
-    private function listemDELETE(): void {
+    private function listemDELETE(array $incorporedParams): void {
 
     }
 
@@ -149,7 +154,17 @@ class RequestListener {
         }
         return $params;
     }
-    private function getCurrentRouteMethod(array $routes, string $uri): Route | null {
-        return isset($routes[$uri]) ? $routes[$uri] : null;
+    private function getCurrentRouteMethod(array $routes): Route | null {
+        $rou = $this->getIntegredParameter();
+
+        $path = $this->uri;
+
+        if(isset($rou) && count($rou[1]) > 0) $path = $rou[0];
+
+        foreach($routes as $r) {
+            if($r->path == $path) return $r;
+        }
+        
+        return null;
     }
 }

@@ -43,7 +43,8 @@ class RoutesKernel {
                 $attributes = $method->getAttributes(Mapping::class);
                 foreach ($attributes as $attribute) {
                     $mapping = $attribute->newInstance();
-                    $this->routes[$mapping->path] = new Route(
+                    $this->routes[] = new Route(
+                        $mapping->path,
                         $instance,
                         $method->getName(),
                         $method->getParameters(),
