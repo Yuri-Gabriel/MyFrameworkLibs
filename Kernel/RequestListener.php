@@ -4,7 +4,7 @@ namespace Framework\Kernel;
 
 use Framework\Libs\Http\HTTP_STATUS;
 use Framework\Libs\Http\Request;
-use Framework\Libs\RequestException;
+use Framework\Libs\Http\RequestException;
 use ReflectionMethod;
 use TypeError;
 
@@ -27,24 +27,67 @@ class RequestListener {
     public function dispatch() {
         $this->currentRouteMethod = $this->getCurrentRouteMethod($this->routes, $this->uri);
 
-        if ($this->currentRouteMethod == null) {
-            throw new RequestException("Route " . $_SERVER["REQUEST_URI"] . " not found", HTTP_STATUS::NOT_FOUND);
-        }
+        $this->getIntegredParameter();
 
-        $request_method = $_SERVER["REQUEST_METHOD"];
-        if ($request_method != $this->currentRouteMethod->http_method) {
-            throw new RequestException(
-                "The method $request_method is not acceptable in route " . $this->uri,
-                HTTP_STATUS::UNAUTHORIZED
-            );
-        }
+        // if ($this->currentRouteMethod == null) {
+        //     throw new RequestException("Route " . $_SERVER["REQUEST_URI"] . " not found", HTTP_STATUS::NOT_FOUND);
+        // }
 
-        try {
-            $listener = $this->listeners[$request_method];
-            $this->$listener();
-        } catch (TypeError $err) {
-            http_response_code(HTTP_STATUS::BAD_REQUEST);
-            echo $err->getMessage();
+        // $request_method = $_SERVER["REQUEST_METHOD"];
+        // if ($request_method != $this->currentRouteMethod->http_method) {
+        //     throw new RequestException(
+        //         "The method $request_method is not acceptable in route " . $this->uri,
+        //         HTTP_STATUS::UNAUTHORIZED
+        //     );
+        // }
+
+        // try {
+        //     $listener = $this->listeners[$request_method];
+        //     $this->$listener();
+        // } catch (TypeError $err) {
+        //     http_response_code(HTTP_STATUS::BAD_REQUEST);
+        //     echo $err->getMessage();
+        // }
+    }
+
+    private function getIntegredParameter() {
+        $countOpenKey = 0;
+        $countCloseKey = 0;
+        foreach($this->routes as $k => $v) {
+            if(str_contains($k, "{") || str_contains($k, "}")) {
+                $pathArray = str_split($k);
+                foreach($pathArray as $char) {
+                    if($char == "{") {
+                        $countOpenKey++;
+                    } else if ($char == "}") {
+                        $countCloseKey++;
+                    }
+                }
+                if($countOpenKey != $countCloseKey) {
+                    throw new RequestException(
+                        "Invalid path: " . $k,
+                        HTTP_STATUS::BAD_REQUEST
+                    );
+                }
+                // Verificar de a $this->uri, rota atual, dar match com a rota $k
+                $params = [];
+                for($i = 0; $i < count($pathArray); $i++) {
+                    if($pathArray[$i] == "{" && ($pathArray[$i + 1] != "{" || $pathArray[$i + 1] != "}")) {
+                        $closeKeyPost = strpos(implode('', $pathArray), '}') + 1;
+                        $i++;
+                        $paramName = "";
+                        for($j = $i; $j < $closeKeyPost; $j++) {
+                            if($pathArray[$j] != "}") {
+                                $paramName .= $pathArray[$j];
+                            }
+                            
+                        }
+                        $params[] = trim($paramName);
+                    }
+                    $pathArray[$i > 0 ? $i - 1 : $i] = ' ';
+                }
+                
+            }
         }
     }
 
