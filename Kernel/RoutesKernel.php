@@ -2,7 +2,8 @@
 
 namespace Framework\Kernel;
 
-use Framework\Libs\Http\Mapping;
+use Framework\Libs\Http\Annotations\Controller;
+use Framework\Libs\Http\Annotations\Mapping;
 use ReflectionClass;
 
 require_once dirname(__DIR__) . "/vendor/autoload.php";
@@ -34,22 +35,30 @@ class RoutesKernel {
     private function router(array $controllerClasses) {
         foreach ($controllerClasses as $className) {
             $reflection = new ReflectionClass($className);
+            $root_path = "";
+            if($this->isController($reflection, $root_path)) {
+                
+                if ($reflection->getName() === Mapping::class) continue;
 
-            if ($reflection->getName() === Mapping::class) continue;
+                $instance = $reflection->newInstance();
 
-            $instance = $reflection->newInstance();
+                foreach ($reflection->getMethods() as $method) {
+                    $attributes = $method->getAttributes(Mapping::class);
+                    foreach ($attributes as $attribute) {
+                        $mapping = $attribute->newInstance();
 
-            foreach ($reflection->getMethods() as $method) {
-                $attributes = $method->getAttributes(Mapping::class);
-                foreach ($attributes as $attribute) {
-                    $mapping = $attribute->newInstance();
-                    $this->routes[] = new Route(
-                        $mapping->path,
-                        $instance,
-                        $method->getName(),
-                        $method->getParameters(),
-                        $mapping->http_method
-                    );
+                        $method_path = str_replace(' ', '', $mapping->path);
+                        $method_path = $method_path == "/" ? "" : $method_path;
+
+                        $path = $root_path == '/' || $root_path == "" ? $method_path : $root_path . $method_path;
+                        $this->routes[] = new Route(
+                            $path,
+                            $instance,
+                            $method->getName(),
+                            $method->getParameters(),
+                            $mapping->http_method
+                        );
+                    }
                 }
             }
         }
@@ -61,5 +70,15 @@ class RoutesKernel {
         }
     }
 
-    
+    private function isController(ReflectionClass $class, string &$root_path): bool {
+        $class_atributes = $class->getAttributes(Controller::class);
+        foreach($class_atributes as $attr) {
+            if($attr->getName() == Controller::class) {
+                $root_path = str_replace(' ', '', $attr->newInstance()->path);
+                return true;
+            }
+        }
+        $root_path = "";
+        return false;
+    }
 }
