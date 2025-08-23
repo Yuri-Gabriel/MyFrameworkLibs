@@ -26,7 +26,7 @@ class RoutesKernel {
         $this->router($controllerClasses);
 
         $uri = parse_url($_SERVER["REQUEST_URI"], PHP_URL_PATH);
-
+        //print_r($this->routes);
         $requestListener = new RequestListener($this->routes, $uri);
         $requestListener->dispatch();
         
@@ -65,8 +65,21 @@ class RoutesKernel {
     }
 
     private function loadControllers(string $path) {
-        foreach (glob($path . "/*.php") as $file) {
-            require_once $file;
+        $conteudo = scandir($path); // Retorna um array com arquivos e pastas
+        $pastas = [];
+
+        foreach ($conteudo as $item) {
+            // Ignora os diretórios . (diretório atual) e .. (diretório pai)
+            if ($item != '.' && $item != '..') {
+                $caminho_completo = $path . '/' . $item;
+                if (is_dir($caminho_completo)) {
+                    $this->loadControllers($path . "/" . $item); // Adiciona o nome da pasta ao array $pastas
+                } else {
+                    foreach (glob($path . "/*.php") as $file) {
+                        require_once $file;
+                    }
+                }
+            }
         }
     }
 
