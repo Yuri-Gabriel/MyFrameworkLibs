@@ -2,8 +2,11 @@
 
 namespace Framework\Kernel;
 
-use Framework\Libs\Http\Annotations\Controller;
-use Framework\Libs\Http\Annotations\Mapping;
+use Framework\Libs\Annotations\Controller;
+use Framework\Libs\Annotations\Interceptor;
+use Framework\Libs\Annotations\Mapping;
+use Framework\Libs\Http\Middleware;
+use Framework\Libs\Http\Response;
 use ReflectionClass;
 
 require_once dirname(__DIR__) . "/vendor/autoload.php";
@@ -12,31 +15,35 @@ class RoutesKernel {
     private array $routes;
 
     public function __construct() {
-        $path = dirname(__DIR__, 4) . "/App/Controller";
+        $pathControllers = dirname(__DIR__, 4) . "/App/Controller";
+        $pathMiddlewares = dirname(__DIR__, 4) . "/App/Middleware";
 
-        $this->loadControllers($path);
+        $this->loadClasses($pathControllers);
+        $this->loadClasses($pathMiddlewares);
 
         $allClasses = get_declared_classes();
 
-        $controllerClasses = array_filter($allClasses, function($class) use ($path) {
+        $controllerClasses = array_filter($allClasses, function($class) use ($pathControllers) {
             $reflection = new ReflectionClass($class);
-            return str_starts_with($reflection->getFileName(), $path);
+            return str_starts_with($reflection->getFileName(), $pathControllers);
         });
 
-        $this->router($controllerClasses);
+        $this->router($controllerClasses);        
+    }
 
+    public function listem(): void {
         $uri = parse_url($_SERVER["REQUEST_URI"], PHP_URL_PATH);
-        //print_r($this->routes);
+
         $requestListener = new RequestListener($this->routes, $uri);
         $requestListener->dispatch();
-        
-    }
+    } 
 
     private function router(array $controllerClasses) {
         foreach ($controllerClasses as $className) {
             $reflection = new ReflectionClass($className);
             $root_path = "";
-            if($this->isController($reflection, $root_path)) {
+            $middlewares = [];
+            if($this->isController($reflection, $root_path, $middlewares)) {
                 
                 if ($reflection->getName() === Mapping::class) continue;
 
@@ -56,7 +63,8 @@ class RoutesKernel {
                             $instance,
                             $method->getName(),
                             $method->getParameters(),
-                            $mapping->http_method
+                            $mapping->http_method,
+                            $middlewares
                         );
                     }
                 }
@@ -64,16 +72,14 @@ class RoutesKernel {
         }
     }
 
-    private function loadControllers(string $path) {
-        $conteudo = scandir($path); // Retorna um array com arquivos e pastas
-        $pastas = [];
+    private function loadClasses(string $path) {
+        $content = scandir($path);
 
-        foreach ($conteudo as $item) {
-            // Ignora os diretórios . (diretório atual) e .. (diretório pai)
+        foreach ($content as $item) {
             if ($item != '.' && $item != '..') {
-                $caminho_completo = $path . '/' . $item;
-                if (is_dir($caminho_completo)) {
-                    $this->loadControllers($path . "/" . $item); // Adiciona o nome da pasta ao array $pastas
+                $full_path = $path . '/' . $item;
+                if (is_dir($full_path)) {
+                    $this->loadClasses($path . "/" . $item);
                 } else {
                     foreach (glob($path . "/*.php") as $file) {
                         require_once $file;
@@ -83,14 +89,21 @@ class RoutesKernel {
         }
     }
 
-    private function isController(ReflectionClass $class, string &$root_path): bool {
+    private function isController(ReflectionClass $class, string &$root_path, array &$middlewares): bool {
         $class_atributes = $class->getAttributes(Controller::class);
         foreach($class_atributes as $attr) {
             if($attr->getName() == Controller::class) {
+                $interceptors = $class->getAttributes(Interceptor::class);
+                foreach($interceptors as $i) {
+                    $middlewares[] = (new ReflectionClass(
+                        $i->newInstance()->middleware
+                    ))->newInstance();
+                }
                 $root_path = str_replace(' ', '', $attr->newInstance()->path);
                 return true;
             }
         }
+        $middlewares = [];
         $root_path = "";
         return false;
     }

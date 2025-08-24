@@ -5,6 +5,7 @@ namespace Framework\Kernel;
 use Framework\Libs\Http\HTTP_STATUS;
 use Framework\Libs\Http\Request;
 use Framework\Libs\Http\RequestException;
+use Framework\Libs\Http\Response;
 use ReflectionMethod;
 use TypeError;
 
@@ -40,63 +41,47 @@ class RequestListener {
                 );
             }
 
-            $listener = $this->listeners[$request_method];
-            $rou = $this->getIntegredParameter();
-            $this->$listener($rou[1]);
-        } catch (RequestException $err) {
-            echo json_encode([
-                "message" => $err->getMessage()
-            ]);
-        }  catch (TypeError $err) {
-            http_response_code(HTTP_STATUS::BAD_REQUEST);
-            echo json_encode([
-                "message" => $err->getMessage()
-            ]);
-        }
-    }
-
-    private function getIntegredParameter(): array | null {
-        $this->sortRoutes();
-        foreach($this->routes as $handler) {
-            $regex = $this->createRegexFromRoute($handler->path);
-            if (preg_match($regex, $this->uri, $matches)) {
-                array_shift($matches);
-                
-                $paramNames = $this->getParamNames($handler->path);
-                
-                $params = array_combine($paramNames, $matches);
-                
-                return [$handler->path, $params];
+            $can_pass = true;
+            if(count($this->currentRouteMethod->middlewares) > 0) {
+                foreach($this->currentRouteMethod->middlewares as $middle) {
+                    $can_pass = $middle->rule();
+                    if(!$can_pass) break;
+                }  
             }
+
+            if(!$can_pass) throw new RequestException(
+                "You can't access this route",
+                HTTP_STATUS::UNAUTHORIZED
+            );
+
+            $listener = $this->listeners[$request_method];
+            $route = ParamParser::getIntegredParameter(
+                $this->routes, 
+                $this->uri
+            );
+            $this->$listener($route[1]);
+        } catch (RequestException $err) {
+            (new Response(
+                $err->getCode(),
+                [
+                    "message" => $err->getMessage()
+                ]
+            ))->dispatch();
+        }  catch (TypeError $err) {
+            (new Response(
+                HTTP_STATUS::BAD_REQUEST,
+                [
+                    "message" => $err->getMessage()
+                ]
+            ))->dispatch();
         }
-        return null;
     }
 
-    private function sortRoutes() {
-        uasort($this->routes, function ($route1, $route2) {
-            $literalParts1 = substr_count($route1->path, '/') - substr_count($route1->path, '{');
-            $literalParts2 = substr_count($route2->path, '/') - substr_count($route2->path, '{');
-            
-            return $literalParts2 - $literalParts1;
-        });
-    }
-
-    private function createRegexFromRoute(string $route) {
-        $tempRoute = preg_replace('/\{[A-Za-z0-9_]+\}/', '__PARAM__', $route);
-        $escapedRoute = preg_quote($tempRoute, '~');
-        $regex = str_replace('__PARAM__', '([^/]+)', $escapedRoute);
-
-        return "~^" . $regex . "$~";
-    }
-
-    private function getParamNames(string $route) {
-        preg_match_all('/\{([A-Za-z0-9_]+)\}/', $route, $matches);
-        return $matches[1];
-    }
+    
 
     private function listemGET(array $incorporedParams): void {
 
-        $params = $this->getURIParams(
+        $params = ParamParser::getURIParams(
             $this->currentRouteMethod->params
         );
 
@@ -113,9 +98,9 @@ class RequestListener {
     }
 
     private function listemPOST(array $incorporedParams): void {
-        $params = $this->getBody(
+        $params = array_merge(ParamParser::getBody(
             $this->currentRouteMethod->params
-        );
+        ), $incorporedParams);
 
         $controllerName = $this->currentRouteMethod->controller;
         $controller = new $controllerName();
@@ -128,34 +113,19 @@ class RequestListener {
     }
 
     private function listemPUT(array $incorporedParams): void {
-
+        $this->listemPOST($incorporedParams);
     }
 
     private function listemDELETE(array $incorporedParams): void {
-
+        $this->listemPOST($incorporedParams);
     }
 
-    private function getURIParams(array $method_params): array {
-        $params = [];
-        foreach($method_params as $param) {
-            $params[$param->name] = $_GET[$param->name] ?? null;
-        }
-        return $params;
-    }
-
-    private function getBody(array $method_params): array {
-        $params = [];
-        foreach($method_params as $param) {
-            if(str_contains($param->getType(), "Request")) {
-                $params[$param->name] = new Request();
-            } else {
-                $params[$param->name] = $_GET[$param->name] ?? null;
-            }
-        }
-        return $params;
-    }
+    
     private function getCurrentRouteMethod(array $routes): Route | null {
-        $rou = $this->getIntegredParameter();
+        $rou = ParamParser::getIntegredParameter(
+            $this->routes, 
+            $this->uri
+        );
 
         $path = $this->uri;
 
