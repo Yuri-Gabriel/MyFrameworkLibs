@@ -2,12 +2,17 @@
 
 namespace Framework\Kernel;
 
+use Exception;
 use Framework\Libs\Annotations\Controller;
 use Framework\Libs\Annotations\Interceptor;
 use Framework\Libs\Annotations\Mapping;
+use Framework\Libs\Annotations\Rule;
+use Framework\Libs\Http\Interceptable;
 use Framework\Libs\Http\Middleware;
 use Framework\Libs\Http\Response;
 use ReflectionClass;
+use ReflectionMethod;
+use Reflector;
 
 require_once dirname(__DIR__) . "/vendor/autoload.php";
 
@@ -40,33 +45,35 @@ class RoutesKernel {
 
     private function router(array $controllerClasses) {
         foreach ($controllerClasses as $className) {
-            $reflection = new ReflectionClass($className);
+            $class = new ReflectionClass($className);
             $root_path = "";
-            $middlewares = [];
-            if($this->isController($reflection, $root_path, $middlewares)) {
+            if($this->isController($class, $root_path)) {
                 
-                if ($reflection->getName() === Mapping::class) continue;
+                if ($class->getName() === Mapping::class) continue;
 
-                $instance = $reflection->newInstance();
+                $class_instance = $class->newInstance();
 
-                foreach ($reflection->getMethods() as $method) {
-                    $attributes = $method->getAttributes(Mapping::class);
-                    foreach ($attributes as $attribute) {
-                        $mapping = $attribute->newInstance();
+                foreach ($class->getMethods() as $method) {
 
-                        $method_path = str_replace(' ', '', $mapping->path);
-                        $method_path = $method_path == "/" ? "" : $method_path;
+                    $mapping_attr = $method->getAttributes(Mapping::class)[0];
+                    $mapping = $mapping_attr->newInstance();
 
-                        $path = $root_path == '/' || $root_path == "" ? $method_path : $root_path . $method_path;
-                        $this->routes[] = new Route(
-                            $path,
-                            $instance,
+                    $method_path = str_replace(' ', '', $mapping->path);
+                    $method_path = $method_path == "/" ? "" : $method_path;
+
+                    $path = $root_path == '/' || $root_path == "" ? $method_path : $root_path . $method_path;
+
+                    $this->routes[] = new Route(
+                        $path,
+                        $mapping->http_method,
+                        new RouteMethod(
+                            $class_instance,
                             $method->getName(),
                             $method->getParameters(),
-                            $mapping->http_method,
-                            $middlewares
-                        );
-                    }
+                            $this->getMiddleware($method)
+                        ),
+                        $this->getMiddleware($class)
+                    );
                 }
             }
         }
@@ -89,22 +96,39 @@ class RoutesKernel {
         }
     }
 
-    private function isController(ReflectionClass $class, string &$root_path, array &$middlewares): bool {
+    private function isController(ReflectionClass $class, string &$root_path): bool {
         $class_atributes = $class->getAttributes(Controller::class);
         foreach($class_atributes as $attr) {
             if($attr->getName() == Controller::class) {
-                $interceptors = $class->getAttributes(Interceptor::class);
-                foreach($interceptors as $i) {
-                    $middlewares[] = (new ReflectionClass(
-                        $i->newInstance()->middleware
-                    ))->newInstance();
-                }
                 $root_path = str_replace(' ', '', $attr->newInstance()->path);
                 return true;
             }
         }
-        $middlewares = [];
         $root_path = "";
         return false;
+    }
+
+    private function getMiddleware(ReflectionMethod|ReflectionClass $obj): array {
+        foreach($obj->getAttributes(Interceptor::class) as $interceptor_attr) {
+            $middle_class = (new ReflectionClass(
+                $interceptor_attr->newInstance()->middleware
+            ));
+            if(!($middle_class->newInstance() instanceof Interceptable)) throw new Exception(
+                $middle_class::class . " need to implement " . Interceptable::class
+            );
+            $rule = null;
+            foreach($middle_class->getMethods() as $method) {
+                if($method->getName() != "rule") continue;
+                $rule = $method->getName();
+                break;
+            }
+            if(isset($rule)) {
+                return [
+                    'class' => $middle_class->newInstance(),
+                    'method' => $rule
+                ];
+            }
+        }
+        return [];
     }
 }

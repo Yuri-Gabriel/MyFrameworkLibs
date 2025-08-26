@@ -3,7 +3,6 @@
 namespace Framework\Kernel;
 
 use Framework\Libs\Http\HTTP_STATUS;
-use Framework\Libs\Http\Request;
 use Framework\Libs\Http\RequestException;
 use Framework\Libs\Http\Response;
 use ReflectionMethod;
@@ -23,6 +22,7 @@ class RequestListener {
     public function __construct(array $routes, string $uri) {
         $this->routes = $routes;
         $this->uri = $uri;
+        
     }
 
     public function dispatch() {
@@ -41,14 +41,27 @@ class RequestListener {
                 );
             }
 
-            $can_pass = true;
-            if(count($this->currentRouteMethod->middlewares) > 0) {
-                foreach($this->currentRouteMethod->middlewares as $middle) {
-                    $can_pass = $middle->rule();
-                    if(!$can_pass) break;
-                }  
+            $can_pass = false;
+            $super_middleware = $this->currentRouteMethod->middlewares;
+            if(count($super_middleware) > 0) {
+                $method = new ReflectionMethod(
+                    new $super_middleware['class'](),
+                    $super_middleware['method']
+                );
+                $controller = $this->currentRouteMethod->middlewares['class'];
+                $can_pass = $method->invoke(new $controller(), []);
             }
 
+            $children_middleware = $this->currentRouteMethod->method->middlewares;
+            if(count($children_middleware) > 0) {
+                $method = new ReflectionMethod(
+                    new $children_middleware['class'](),
+                    $children_middleware['method']
+                );
+                $controller = $children_middleware['class'];
+                $can_pass = $method->invoke(new $controller(), []);
+            }
+            
             if(!$can_pass) throw new RequestException(
                 "You can't access this route",
                 HTTP_STATUS::UNAUTHORIZED
@@ -71,26 +84,26 @@ class RequestListener {
             (new Response(
                 HTTP_STATUS::BAD_REQUEST,
                 [
+                    "file" => $err->getFile(),
+                    "Line" => $err->getLine(),
                     "message" => $err->getMessage()
                 ]
             ))->dispatch();
         }
     }
 
-    
-
     private function listemGET(array $incorporedParams): void {
 
         $params = ParamParser::getURIParams(
-            $this->currentRouteMethod->params
+            $this->currentRouteMethod->method->params
         );
 
         $params = array_merge($params, $incorporedParams);
 
-        $controllerName = $this->currentRouteMethod->controller;
+        $controllerName = $this->currentRouteMethod->method->controller;
         $controller = new $controllerName();
 
-        $methodName = $this->currentRouteMethod->method;
+        $methodName = $this->currentRouteMethod->method->name;
 
         $ref = new ReflectionMethod($controller, $methodName);
         
@@ -99,13 +112,13 @@ class RequestListener {
 
     private function listemPOST(array $incorporedParams): void {
         $params = array_merge(ParamParser::getBody(
-            $this->currentRouteMethod->params
+            $this->currentRouteMethod->method->params
         ), $incorporedParams);
 
-        $controllerName = $this->currentRouteMethod->controller;
+        $controllerName = $this->currentRouteMethod->method->controller;
         $controller = new $controllerName();
 
-        $methodName = $this->currentRouteMethod->method;
+        $methodName = $this->currentRouteMethod->method->name;
 
         $ref = new ReflectionMethod($controller, $methodName);
         
