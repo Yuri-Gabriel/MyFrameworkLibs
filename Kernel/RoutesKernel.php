@@ -4,12 +4,9 @@ namespace Framework\Kernel;
 
 use Exception;
 use Framework\Libs\Annotations\Controller;
-use Framework\Libs\Annotations\Interceptor;
+use Framework\Libs\Annotations\Interceptors;
 use Framework\Libs\Annotations\Mapping;
-use Framework\Libs\Annotations\Rule;
 use Framework\Libs\Http\Interceptable;
-use Framework\Libs\Http\Middleware;
-use Framework\Libs\Http\Response;
 use ReflectionClass;
 use ReflectionMethod;
 use Reflector;
@@ -109,26 +106,30 @@ class RoutesKernel {
     }
 
     private function getMiddleware(ReflectionMethod|ReflectionClass $obj): array {
-        foreach($obj->getAttributes(Interceptor::class) as $interceptor_attr) {
-            $middle_class = (new ReflectionClass(
-                $interceptor_attr->newInstance()->middleware
-            ));
-            if(!($middle_class->newInstance() instanceof Interceptable)) throw new Exception(
-                $middle_class::class . " need to implement " . Interceptable::class
-            );
-            $rule = null;
-            foreach($middle_class->getMethods() as $method) {
-                if($method->getName() != "rule") continue;
-                $rule = $method->getName();
-                break;
+        $middlewares = [];
+        foreach($obj->getAttributes(Interceptors::class) as $interceptor_attr) {
+            foreach($interceptor_attr->newInstance()->middlewares as $middle) {
+                $middle_class = (new ReflectionClass(
+                    $middle
+                ));
+                if(!($middle_class->newInstance() instanceof Interceptable)) throw new Exception(
+                    $middle_class::class . " need to implement " . Interceptable::class
+                );
+                $rule = null;
+                foreach($middle_class->getMethods() as $method) {
+                    if($method->getName() != "rule") continue;
+                    $rule = $method->getName();
+                    break;
+                }
+                if(isset($rule)) {
+                    $middlewares[] = [
+                        'class' => $middle_class->newInstance(),
+                        'method' => $rule
+                    ];
+                }
             }
-            if(isset($rule)) {
-                return [
-                    'class' => $middle_class->newInstance(),
-                    'method' => $rule
-                ];
-            }
+            
         }
-        return [];
+        return $middlewares;
     }
 }

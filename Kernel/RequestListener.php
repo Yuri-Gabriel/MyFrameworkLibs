@@ -42,30 +42,33 @@ class RequestListener {
             }
 
             $can_pass = false;
-            $super_middleware = $this->currentRouteMethod->middlewares;
-            if(count($super_middleware) > 0) {
+            $super_middlewares = $this->currentRouteMethod->middlewares;
+            foreach($super_middlewares as $sm) {
                 $method = new ReflectionMethod(
-                    new $super_middleware['class'](),
-                    $super_middleware['method']
+                    new $sm['class'](),
+                    $sm['method']
                 );
-                $controller = $this->currentRouteMethod->middlewares['class'];
+                $controller = $sm['class'];
                 $can_pass = $method->invoke(new $controller(), []);
+                if(!$can_pass) throw new RequestException(
+                    "You can't access this route",
+                    HTTP_STATUS::UNAUTHORIZED
+                );
             }
 
-            $children_middleware = $this->currentRouteMethod->method->middlewares;
-            if(count($children_middleware) > 0) {
+            $children_middlewares = $this->currentRouteMethod->method->middlewares;
+            foreach($children_middlewares as $cm) {
                 $method = new ReflectionMethod(
-                    new $children_middleware['class'](),
-                    $children_middleware['method']
+                    new $cm['class'](),
+                    $cm['method']
                 );
-                $controller = $children_middleware['class'];
+                $controller = $cm['class'];
                 $can_pass = $method->invoke(new $controller(), []);
+                if(!$can_pass) throw new RequestException(
+                    "You can't access this route",
+                    HTTP_STATUS::UNAUTHORIZED
+                );
             }
-            
-            if(!$can_pass) throw new RequestException(
-                "You can't access this route",
-                HTTP_STATUS::UNAUTHORIZED
-            );
 
             $listener = $this->listeners[$request_method];
             $route = ParamParser::getIntegredParameter(

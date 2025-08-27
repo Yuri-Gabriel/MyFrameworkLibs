@@ -5,8 +5,8 @@ namespace Framework\Libs\Annotations;
 use Attribute;
 
 #[Attribute(Attribute::TARGET_CLASS|Attribute::TARGET_METHOD)]
-class Interceptor {
+class Interceptors {
     public function __construct(
-        public string $middleware
+        public array $middlewares
     ) {}
 }
