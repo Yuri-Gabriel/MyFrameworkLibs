@@ -9,7 +9,6 @@ use Framework\Libs\Annotations\Mapping;
 use Framework\Libs\Http\Interceptable;
 use ReflectionClass;
 use ReflectionMethod;
-use Reflector;
 
 require_once dirname(__DIR__) . "/vendor/autoload.php";
 

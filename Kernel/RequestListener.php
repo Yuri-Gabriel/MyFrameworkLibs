@@ -3,7 +3,7 @@
 namespace Framework\Kernel;
 
 use Framework\Libs\Http\HTTP_STATUS;
-use Framework\Libs\Http\RequestException;
+use Framework\Libs\Exception\RequestException;
 use Framework\Libs\Http\Response;
 use ReflectionMethod;
 use TypeError;
