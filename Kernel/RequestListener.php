@@ -28,7 +28,8 @@ class RequestListener {
     public function dispatch() {
         try {
             $this->currentRouteMethod = $this->getCurrentRouteMethod($this->routes, $this->uri);
-
+            // echo $this->currentRouteMethod == null ? "true" : "false";
+            // die();
             if ($this->currentRouteMethod == null) {
                 throw new RequestException("Route " . $_SERVER["REQUEST_URI"] . " not found", HTTP_STATUS::NOT_FOUND);
             }
@@ -96,18 +97,14 @@ class RequestListener {
     }
 
     private function listemGET(array $incorporedParams): void {
-
         $params = ParamParser::getURIParams(
             $this->currentRouteMethod->method->params
         );
-
         $params = array_merge($params, $incorporedParams);
 
-        $controllerName = $this->currentRouteMethod->method->controller;
-        $controller = new $controllerName();
+        $controller = $this->currentRouteMethod->method->controller;
 
         $methodName = $this->currentRouteMethod->method->name;
-
         $ref = new ReflectionMethod($controller, $methodName);
         
         $ref->invokeArgs($controller, $params);
@@ -118,11 +115,9 @@ class RequestListener {
             $this->currentRouteMethod->method->params
         ), $incorporedParams);
 
-        $controllerName = $this->currentRouteMethod->method->controller;
-        $controller = new $controllerName();
+        $controller = $this->currentRouteMethod->method->controller;
 
         $methodName = $this->currentRouteMethod->method->name;
-
         $ref = new ReflectionMethod($controller, $methodName);
         
         $ref->invokeArgs($controller, $params);

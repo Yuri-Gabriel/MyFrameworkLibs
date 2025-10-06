@@ -4,6 +4,7 @@ namespace Framework\Kernel;
 
 use Exception;
 use Framework\Libs\Annotations\Controller;
+use Framework\Libs\Annotations\Instanciate;
 use Framework\Libs\Annotations\Interceptors;
 use Framework\Libs\Annotations\Mapping;
 use Framework\Libs\Http\Interceptable;
@@ -33,6 +34,11 @@ class RoutesKernel {
     }
 
     public function listem(): void {
+        // header("Content-Type: application/json");
+        // echo json_encode(
+        //     $this->routes
+        // );
+        // die();
         $uri = parse_url($_SERVER["REQUEST_URI"], PHP_URL_PATH);
 
         $requestListener = new RequestListener($this->routes, $uri);
@@ -46,19 +52,35 @@ class RoutesKernel {
             if($this->isController($class, $root_path)) {
                 
                 if ($class->getName() === Mapping::class) continue;
-
                 $class_instance = $class->newInstance();
+                foreach ($class->getProperties() as $prop) {
+                    $attr = $prop->getAttributes(Instanciate::class);
+                    if(count($attr) > 0) {
+                        $classNameToInstantiate = $prop->getType()->getName();
+
+                        $dependencyInstance = new $classNameToInstantiate();
+                        
+                        $prop->setAccessible(true);
+                        $prop->setValue($class_instance, $dependencyInstance);
+
+                    }
+                }
 
                 foreach ($class->getMethods() as $method) {
 
-                    $mapping_attr = $method->getAttributes(Mapping::class)[0];
+                    $mapping_attrs = $method->getAttributes(Mapping::class);
+                    if (empty($mapping_attrs)) {
+                        continue; 
+                    }
+
+                    $mapping_attr = $mapping_attrs[0];
                     $mapping = $mapping_attr->newInstance();
 
                     $method_path = str_replace(' ', '', $mapping->path);
                     $method_path = $method_path == "/" ? "" : $method_path;
 
-                    $path = $root_path == '/' || $root_path == "" ? $method_path : $root_path . $method_path;
-
+                    $path = $this->getRoutePath($root_path, $method_path);
+                    
                     $this->routes[] = new Route(
                         $path,
                         $mapping->http_method,
@@ -72,6 +94,15 @@ class RoutesKernel {
                     );
                 }
             }
+        }
+    }
+
+    private function getRoutePath($root_path, $method_path): string {
+        if($root_path == '/' || $root_path == "") {
+            if($method_path == '/' || $method_path == '') return '/';
+            return $method_path;
+        } else {
+            return $root_path . $method_path;
         }
     }
 

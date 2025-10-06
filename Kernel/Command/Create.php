@@ -33,7 +33,7 @@ class Create implements Inputable {
             $file_name,
             $path,
             FileContent::getContent(
-                explode(".", $file_name)[0],
+                explode(".", $file_name)[0]
                 
             )
         );
