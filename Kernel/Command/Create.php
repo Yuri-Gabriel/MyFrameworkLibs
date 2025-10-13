@@ -33,8 +33,8 @@ class Create implements Inputable {
             $file_name,
             $path,
             FileContent::getContent(
-                explode(".", $file_name)[0]
-                
+                explode(".", $file_name)[0],
+                $this->args[0]
             )
         );
     }
@@ -43,13 +43,19 @@ class Create implements Inputable {
         $dir = dirname(__DIR__, 5) . $path;
         
         if(is_dir($dir)) {
+            $path = $dir . "/" . $file_name . ".php";
+            if(file_exists($path)) {
+                echo "The file " . $path . " already exists!\n";
+                return;
+            }
             file_put_contents(
-                $dir . "/" . $file_name,
-                ""
+                $path,
+                $file_content
             );
+            echo "The file " . $path . " has been created!\n";
         } else {
             mkdir($dir, 0777, true);
-            $this->makeFile($file_name, $path);
+            $this->makeFile($file_name, $path, $file_content);
         }
     }
 }

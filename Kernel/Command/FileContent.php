@@ -12,12 +12,7 @@ class FileContent {
                 "Framework\Libs\Annotations\Controller",
                 "Framework\Libs\Annotations\Mapping"
             ],
-            "default_function" => "
-                #[Mapping('/')]
-                public function main(): void {
-                    
-                }
-            "
+            "default_function" => "\t#[Mapping('/')]\n\tpublic function main(): void {\n\n\t}"
         ],
         "middleware" => [
             "namespace" => "App\Middleware;",
@@ -27,32 +22,30 @@ class FileContent {
                 "Framework\Libs\Annotations\Middleware",
                 "Framework\Libs\Http\Interceptable"
             ],
-            "default_function" => "
-                public function rule(): bool {
-                    return true;
-                }
-            "
+            "default_function" => "\tpublic function rule(): bool {\n\t\treturn true;\n\t}"
         ],
         "view" => []
     ];
     public static function getContent(string $class_name, string $type): string {
         $contents = self::$contents[$type];
-        $implementation = $contents['implements'] ?? "";
-        $str = "
-            <?php
 
-            %s
-
-            %s
-
-            class %s %s {
-                %s
+        $import_statements = '';
+        if (isset($contents['imports']) && is_array($contents['imports'])) {
+            foreach ($contents['imports'] as $import_class) {
+                $import_statements .= "use {$import_class};" . PHP_EOL;
             }
-        ";
+        }
+
+        $implementation = $contents['implements'] ? 'implements ' . $contents['implements'] : "";
+        $annotation = $contents['annotation'] ?? "";
+
+        $str = "<?php\n\nnamespace %s\n\n%s\n\n%s\nclass %s %s {\n%s\n}";
+        
         return sprintf(
             $str,
             $contents['namespace'],
-            $contents['imports'],
+            $import_statements,
+            $annotation,
             $class_name,
             $implementation,
             $contents['default_function']

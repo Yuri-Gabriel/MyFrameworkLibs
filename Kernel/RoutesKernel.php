@@ -4,7 +4,7 @@ namespace Framework\Kernel;
 
 use Exception;
 use Framework\Libs\Annotations\Controller;
-use Framework\Libs\Annotations\Instanciate;
+use Framework\Libs\Annotations\Instantiate;
 use Framework\Libs\Annotations\Interceptors;
 use Framework\Libs\Annotations\Mapping;
 use Framework\Libs\Http\Interceptable;
@@ -54,7 +54,7 @@ class RoutesKernel {
                 if ($class->getName() === Mapping::class) continue;
                 $class_instance = $class->newInstance();
                 foreach ($class->getProperties() as $prop) {
-                    $attr = $prop->getAttributes(Instanciate::class);
+                    $attr = $prop->getAttributes(Instantiate::class);
                     if(count($attr) > 0) {
                         $classNameToInstantiate = $prop->getType()->getName();
 
