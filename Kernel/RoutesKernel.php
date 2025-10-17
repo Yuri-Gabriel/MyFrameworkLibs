@@ -4,6 +4,7 @@ namespace Framework\Kernel;
 
 use Exception;
 use Framework\Libs\Annotations\Controller;
+use Framework\Libs\Annotations\DataBase\Model;
 use Framework\Libs\Annotations\Instantiate;
 use Framework\Libs\Annotations\Interceptors;
 use Framework\Libs\Annotations\Mapping;
@@ -17,11 +18,13 @@ class RoutesKernel {
     private array $routes;
 
     public function __construct() {
-        $pathControllers = dirname(__DIR__, 4) . "/App/Controller";
-        $pathMiddlewares = dirname(__DIR__, 4) . "/App/Middleware";
+        $pathControllers = $_SERVER["DOCUMENT_ROOT"] . "/App/Controller";
+        $pathMiddlewares = $_SERVER["DOCUMENT_ROOT"] . "/App/Middleware";
+        $pathModel = $_SERVER["DOCUMENT_ROOT"] . "/App/Model";
 
         $this->loadClasses($pathControllers);
         $this->loadClasses($pathMiddlewares);
+        $this->loadClasses($pathModel);
 
         $allClasses = get_declared_classes();
 
@@ -30,7 +33,13 @@ class RoutesKernel {
             return str_starts_with($reflection->getFileName(), $pathControllers);
         });
 
-        $this->router($controllerClasses);        
+        $modelClasses = array_filter($allClasses, function($class) use ($pathModel) {
+            $reflection = new ReflectionClass($class);
+            return str_starts_with($reflection->getFileName(), $pathModel);
+        });
+
+        $this->router($controllerClasses);    
+        $this->chargeModels($modelClasses);   
     }
 
     public function listem(): void {
@@ -97,6 +106,20 @@ class RoutesKernel {
         }
     }
 
+    private function chargeModels(array $modelClasses) {
+        foreach ($modelClasses as $className) {
+            $class = new ReflectionClass($className);
+            $attributes = $class->getAttributes(Model::class);
+            if(count($attributes) > 0) {
+                $attr = $attributes[0];
+                $attr_class = $attr->newInstance();
+                print_r($attr_class);
+                die;
+            }
+               
+        }
+    }
+
     private function getRoutePath($root_path, $method_path): string {
         if($root_path == '/' || $root_path == "") {
             if($method_path == '/' || $method_path == '') return '/';
@@ -107,6 +130,7 @@ class RoutesKernel {
     }
 
     private function loadClasses(string $path) {
+        if(!is_dir($path)) return;
         $content = scandir($path);
 
         foreach ($content as $item) {
@@ -132,6 +156,16 @@ class RoutesKernel {
             }
         }
         $root_path = "";
+        return false;
+    }
+
+    private function isModel(ReflectionClass $class): bool {
+        $class_atributes = $class->getAttributes(Model::class);
+        foreach($class_atributes as $attr) {
+            if($attr->getName() == Model::class) {
+                return true;
+            }
+        }
         return false;
     }
 
