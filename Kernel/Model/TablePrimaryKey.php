@@ -2,9 +2,8 @@
 
 namespace Framework\Kernel\Model;
 
-class Entity {
+class TablePrimaryKey {
     public function __construct(
-        public string $table,
-        public array $collumns
+        public bool $autoincrement = true
     ) {}
 }

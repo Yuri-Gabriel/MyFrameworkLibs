@@ -9,7 +9,7 @@ use Framework\Libs\Annotations\DataBase\Model;
 use Framework\Libs\Annotations\DataBase\Collumn;
 use Framework\Libs\Annotations\DataBase\ForeignKey;
 use Framework\Libs\Annotations\DataBase\PrimaryKey;
-
+use Framework\Libs\Exception\ModelException;
 use ReflectionClass;
 use ReflectionProperty;
 
@@ -28,7 +28,9 @@ class ModelKernel implements Kernable {
             "bool" => "BOOLEAN",
             "float" => "FLOAT"
         ];
-        $this->interpret($modelClasses);   
+
+        $tables = $this->interpret($modelClasses); 
+        $this->buildSQLs($tables); 
     }
 
     public function run(): void {
@@ -37,7 +39,6 @@ class ModelKernel implements Kernable {
 
     private function interpret(array $modelClasses) {
         $tables = [];
-        echo "<pre>";
         foreach ($modelClasses as $className) {
             $class = new ReflectionClass($className);
             $table = "";
@@ -51,37 +52,100 @@ class ModelKernel implements Kernable {
                     $fk = null;
                     $other_table = "";
                     $other_table_id = "";
-                    if($this->isForeignKey($prop, $other_table, $other_table_id)) {
+                    $delete_cascade = false;
+                    if($this->isForeignKey($prop, $other_table, $other_table_id, $delete_cascade)) {
+                        $other_table_name = "";
+
+                        if(!$this->isModel(
+                            new ReflectionClass($other_table), 
+                            $other_table_name
+                        )) throw new ModelException(
+                            "The class $other_table don't is a model"
+                        );
+
                         $fk = new TableForeignKey(
-                            $other_table,
+                            $other_table_name,
                             $collumn_name,
-                            $other_table_id
+                            $other_table_id,
+                            $delete_cascade
                         );
                     }
+                    $pk = null;
+                    $autoincrement = false;
+                    if($this->isPrimaryKey($prop, $autoincrement)) {
+                        $pk = new TablePrimaryKey($autoincrement);
+                    }
+
                     $collumn = new TableCollumn(
                         $collumn_name,
                         $this->types[$prop->getType()->getName()],
+                        $pk,
                         $fk
                     );
 
                     $collumns[] = $collumn;
 
                 }
-                $entity->collunmns = $collumns;
+                $entity->collumns = $collumns;
                 $tables[] = $entity;
             }
         }
-        print_r($tables);
+        // echo "<pre>";
+        // print_r($tables);
+        // die;
+        return $tables;
+    }
+
+    private function buildSQLs(array $tables) {
+        $sql = "";
+        foreach($tables as $table) {
+            $sql .= "\nCREATE TABLE IF NOT EXISTS $table->table (";
+            foreach($table->collumns as $collumn) {
+                $name = $collumn->name;
+                $type = $collumn->type;
+                $pk = "";
+                if($collumn->pk) {
+                    $autoincrement = $collumn->pk->autoincrement ? "AUTO_INCREMENT" : "";
+                    $pk = "$autoincrement PRIMARY KEY";
+                }
+                $sql .= "\n\t$name $type $pk";
+                
+                if($collumn->fk) {
+                    $other_table_name = $collumn->fk->other_table;
+                    $from_collumn = $collumn->fk->from_collumn;
+                    $to_collumn = $collumn->fk->to_collumn;
+                    $delete_cascade = $collumn->fk->delete_cascade ? "ON DELETE CASCADE" : "";
+                    $sql .= "\n\tFOREIGN KEY ($from_collumn) REFERENCES $other_table_name($to_collumn) $delete_cascade";
+                }
+            }
+            $sql .= "\n)";
+        }
+        
+        echo "<pre>";
+        echo $sql;
         die;
     }
 
-    private function isForeignKey(ReflectionProperty $prop, string &$other_table = "", string &$other_table_id = ""): bool {
+    private function isForeignKey(ReflectionProperty $prop, string &$other_table, string &$other_table_id, bool &$delete_cascade): bool {
         $prop_atributes = $prop->getAttributes(ForeignKey::class);
         foreach($prop_atributes as $attr) {
             if($attr->getName() == ForeignKey::class) {
                 $instance = $attr->newInstance();
                 $other_table = $instance->table;
                 $other_table_id = $instance->fk_column;
+                $delete_cascade = $instance->delete_cascade;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private function isPrimaryKey(ReflectionProperty $prop, bool &$autoincrement): bool {
+        $prop_atributes = $prop->getAttributes(PrimaryKey::class);
+        foreach($prop_atributes as $attr) {
+            if($attr->getName() == PrimaryKey::class) {
+                $instance = $attr->newInstance();
+                $autoincrement = $instance->autoincrement;
                 return true;
             }
         }

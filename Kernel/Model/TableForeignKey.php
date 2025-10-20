@@ -6,6 +6,7 @@ class TableForeignKey {
     public function __construct(
         public string $other_table,
         public string $from_collumn,
-        public string $to_collumn
+        public string $to_collumn,
+        public bool $delete_cascade
     ) {}
 }

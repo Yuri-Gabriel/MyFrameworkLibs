@@ -8,6 +8,7 @@ use Attribute;
 class ForeignKey {
     public function __construct(
         public string $fk_column,
-        public string $table
+        public string $table,
+        public bool $delete_cascade = false
     ) {}
 }
