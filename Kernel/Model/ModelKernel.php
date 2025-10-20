@@ -29,7 +29,14 @@ class ModelKernel implements Kernable {
             "float" => "FLOAT"
         ];
 
-        $tables = $this->interpret($modelClasses); 
+        $tables = $this->interpret($modelClasses);
+        echo "<pre>";
+        print_r($tables);
+        
+        $this->sortTables($tables);
+        echo "<br><br>";
+        print_r($tables);
+        die;
         $this->buildSQLs($tables); 
     }
 
@@ -90,10 +97,31 @@ class ModelKernel implements Kernable {
                 $tables[] = $entity;
             }
         }
-        // echo "<pre>";
-        // print_r($tables);
-        // die;
+        
         return $tables;
+    }
+
+    private function sortTables(array &$tables) {
+        for($i = 0; $i < count($tables); $i++) {
+            $table_fk = "";
+            foreach($tables[$i]->collumns as $i_collumn) {
+                if(!empty($i_collumn->fk)) {
+                    $table_fk = $i_collumn->fk->other_table;
+                    break;
+                }
+            }
+            if($table_fk == "") continue;
+
+            for($j = 0; $j < count($tables); $j++) {
+                if($table_fk == $tables[$j]->table && $i < $j) {
+                    $temp = $tables[$i];
+                    $tables[$i] = $tables[$j];
+                    $tables[$j] = $temp;
+                    $i = 0;
+                    break;
+                }
+            }
+        }
     }
 
     private function buildSQLs(array $tables) {
