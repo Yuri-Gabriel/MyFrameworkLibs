@@ -8,7 +8,7 @@ use Attribute;
 class Model {
 
     public function __construct(
-        public string $table = ""
+        public string $table
     ) {}
 
     public function __set(string $key, string $value) {

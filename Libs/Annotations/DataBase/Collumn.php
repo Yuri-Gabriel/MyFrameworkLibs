@@ -5,7 +5,7 @@ namespace Framework\Libs\Annotations\DataBase;
 use Attribute;
 
 #[Attribute(Attribute::TARGET_PROPERTY)]
-class Column {
+class Collumn {
     public function __construct(
         public string $name = ""
     ) {}

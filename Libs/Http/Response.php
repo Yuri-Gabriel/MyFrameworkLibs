@@ -10,7 +10,7 @@ class Response {
     public ?array $body;
     public int $http_code;
 
-    public function __construct(int $http_code, ?array $body = null) {
+    public function __construct(int $http_code = HTTP_STATUS::OK, ?array $body = null) {
         $this->body = $body;
         $this->http_code = $http_code;
     }

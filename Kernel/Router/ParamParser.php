@@ -1,6 +1,6 @@
 <?php
 
-namespace Framework\Kernel;
+namespace Framework\Kernel\Router;
 
 use Framework\Libs\Http\Request;
 

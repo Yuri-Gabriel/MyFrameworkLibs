@@ -1,6 +1,6 @@
 <?php
 
-namespace Framework\Kernel;
+namespace Framework\Kernel\Router;
 
 use Framework\Libs\Http\HTTP_STATUS;
 use Framework\Libs\Exception\RequestException;
@@ -89,7 +89,7 @@ class RequestListener {
                 HTTP_STATUS::BAD_REQUEST,
                 [
                     "file" => $err->getFile(),
-                    "Line" => $err->getLine(),
+                    "line" => $err->getLine(),
                     "message" => $err->getMessage()
                 ]
             ))->dispatch();

@@ -14,7 +14,7 @@ class Run implements Inputable {
 
     public function run() {
         $port = null;
-        $command = "php -S localhost:8000";
+        $command = "php -S 0.0.0.0:8000";
         
         foreach($this->args as $arg) {
             if(str_contains($arg, '--port')) {
@@ -22,7 +22,7 @@ class Run implements Inputable {
             }
         }
 
-        if(isset($port)) $command = "php -S localhost:$port";
+        if(isset($port)) $command = "php -S 0.0.0.0:$port";
         
         foreach($this->params as $param) {
             $command .= $param;
