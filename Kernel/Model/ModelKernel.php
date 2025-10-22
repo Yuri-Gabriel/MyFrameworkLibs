@@ -30,13 +30,7 @@ class ModelKernel implements Kernable {
         ];
 
         $tables = $this->interpret($modelClasses);
-        echo "<pre>";
-        print_r($tables);
-        
         $this->sortTables($tables);
-        echo "<br><br>";
-        print_r($tables);
-        die;
         $this->buildSQLs($tables); 
     }
 
