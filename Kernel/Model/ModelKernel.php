@@ -17,25 +17,27 @@ class ModelKernel implements Kernable {
 
     private array $types;
     public function __construct() {
-        $pathModel = $_SERVER["DOCUMENT_ROOT"] . "/App/Model";
-        ClassLoader::load($pathModel);
-
-        $modelClasses = ClassLoader::getClasses($pathModel);
-
         $this->types = [
             "int" => "INTEGER",
             "string" => "VARCHAR(255)",
             "bool" => "BOOLEAN",
-            "float" => "FLOAT"
+            "float" => "FLOAT",
+            "array" => "JSON"
         ];
-
-        $tables = $this->interpret($modelClasses);
-        $this->sortTables($tables);
-        $this->buildSQLs($tables); 
     }
 
     public function run(): void {
+        $pathModel = $_SERVER["DOCUMENT_ROOT"] . "/App/Model";
+        $pathRepository = $_SERVER["DOCUMENT_ROOT"] . "/App/Repository";
+
+        ClassLoader::load($pathModel);
+        ClassLoader::load($pathRepository);
         
+        $modelClasses = ClassLoader::getClasses($pathModel);
+
+        $tables = $this->interpret($modelClasses);
+        $this->sortTables($tables);
+        $this->buildSQLs($tables);
     } 
 
     private function interpret(array $modelClasses) {
@@ -143,9 +145,9 @@ class ModelKernel implements Kernable {
             $sql .= "\n)";
         }
         
-        echo "<pre>";
-        echo $sql;
-        die;
+        // echo "<pre>";
+        // echo $sql;
+        // die;
     }
 
     private function isForeignKey(ReflectionProperty $prop, string &$other_table, string &$other_table_id, bool &$delete_cascade): bool {
