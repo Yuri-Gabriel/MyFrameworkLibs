@@ -8,8 +8,10 @@ use Framework\Kernel\Kernable;
 use Framework\Libs\Annotations\DataBase\Model;
 use Framework\Libs\Annotations\DataBase\Collumn;
 use Framework\Libs\Annotations\DataBase\ForeignKey;
+use Framework\Libs\Annotations\DataBase\Nullable;
 use Framework\Libs\Annotations\DataBase\PrimaryKey;
 use Framework\Libs\Exception\ModelException;
+
 use ReflectionClass;
 use ReflectionProperty;
 
@@ -36,6 +38,9 @@ class ModelKernel implements Kernable {
         $modelClasses = ClassLoader::getClasses($pathModel);
 
         $tables = $this->interpret($modelClasses);
+        echo "<pre>";
+        print_r($tables);
+        die;
         $this->sortTables($tables);
         $this->buildSQLs($tables);
     } 
@@ -51,7 +56,8 @@ class ModelKernel implements Kernable {
                 $props = $class->getProperties();
                 foreach($props as $prop) {
                     $collumn_name = "";
-                    if(!$this->isCollumn($prop, $collumn_name)) continue;
+                    $default_value = "";
+                    if(!$this->isCollumn($prop, $collumn_name, $default_value)) continue;
                     $fk = null;
                     $other_table = "";
                     $other_table_id = "";
@@ -82,6 +88,8 @@ class ModelKernel implements Kernable {
                     $collumn = new TableCollumn(
                         $collumn_name,
                         $this->types[$prop->getType()->getName()],
+                        $this->canBeNull($prop),
+                        $default_value,
                         $pk,
                         $fk
                     );
@@ -145,9 +153,9 @@ class ModelKernel implements Kernable {
             $sql .= "\n)";
         }
         
-        // echo "<pre>";
-        // echo $sql;
-        // die;
+        echo "<pre>";
+        echo $sql;
+        die;
     }
 
     private function isForeignKey(ReflectionProperty $prop, string &$other_table, string &$other_table_id, bool &$delete_cascade): bool {
@@ -158,6 +166,16 @@ class ModelKernel implements Kernable {
                 $other_table = $instance->table;
                 $other_table_id = $instance->fk_column;
                 $delete_cascade = $instance->delete_cascade;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private function canBeNull(ReflectionProperty $prop): bool {
+        $prop_atributes = $prop->getAttributes(Nullable::class);
+        foreach($prop_atributes as $attr) {
+            if($attr->getName() == Nullable::class) {
                 return true;
             }
         }
@@ -176,11 +194,12 @@ class ModelKernel implements Kernable {
         return false;
     }
 
-    private function isCollumn(ReflectionProperty $prop, string &$name = ""): bool {
+    private function isCollumn(ReflectionProperty $prop, string &$name = "", mixed &$default_value): bool {
         $prop_atributes = $prop->getAttributes(Collumn::class);
         foreach($prop_atributes as $attr) {
             if($attr->getName() == Collumn::class) {
-                $name = $attr->newInstance()->name;
+                $name = $prop->name;
+                $default_value = $attr->newInstance()->defaultValue;
                 return true;
             }
         }
