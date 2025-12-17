@@ -7,15 +7,16 @@ use ReflectionClass;
 use Framework\Kernel\Model\ModelKernel;
 use Framework\Kernel\Router\RoutesKernel;
 
-// require_once dirname(__DIR__) . "/vendor/autoload.php";
-
 class Kernel {
 
     /** @var array<Kernable> */
     private array $kernels;
     public function __construct() {
+
+        ClassLoader::load("/app");
+
         $this->kernels = [
-            ModelKernel::class,
+            //ModelKernel::class,
             RoutesKernel::class
         ];
     }

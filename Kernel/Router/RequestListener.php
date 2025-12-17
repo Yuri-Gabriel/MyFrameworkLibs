@@ -27,9 +27,8 @@ class RequestListener {
 
     public function dispatch() {
         try {
-            $this->currentRouteMethod = $this->getCurrentRouteMethod($this->routes, $this->uri);
-            // echo $this->currentRouteMethod == null ? "true" : "false";
-            // die();
+            $this->currentRouteMethod = $this->getCurrentRouteMethod($this->routes);
+
             if ($this->currentRouteMethod == null) {
                 throw new RequestException("Route " . $_SERVER["REQUEST_URI"] . " not found", HTTP_STATUS::NOT_FOUND);
             }
@@ -108,6 +107,7 @@ class RequestListener {
         $ref = new ReflectionMethod($controller, $methodName);
         
         $ref->invokeArgs($controller, $params);
+
     }
 
     private function listemPOST(array $incorporedParams): void {

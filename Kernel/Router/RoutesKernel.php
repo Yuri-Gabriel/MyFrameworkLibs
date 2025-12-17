@@ -17,26 +17,17 @@ use ReflectionMethod;
 use Exception;
 
 class RoutesKernel implements Kernable {
+    
+    /** @var array<Route> */
     private array $routes;
 
     public function __construct() {
-        $pathControllers = $_SERVER["DOCUMENT_ROOT"] . "/App/Controller";
-        $pathMiddlewares = $_SERVER["DOCUMENT_ROOT"] . "/App/Middleware";
-
-        ClassLoader::load($pathControllers);
-        ClassLoader::load($pathMiddlewares);
-
-        $controllerClasses = ClassLoader::getClasses($pathControllers);
-
+        $controllerClasses = ClassLoader::getClasses("/app/controller");
+        $this->routes = [];
         $this->router($controllerClasses); 
     }
 
     public function run(): void {
-        // header("Content-Type: application/json");
-        // echo json_encode(
-        //     $this->routes
-        // );
-        // die();
         $uri = parse_url($_SERVER["REQUEST_URI"], PHP_URL_PATH);
 
         $requestListener = new RequestListener($this->routes, $uri);

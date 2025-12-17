@@ -6,6 +6,11 @@ use ReflectionClass;
 
 class ClassLoader {
     public static function load(string $path) {
+        if(!str_contains($path,$_SERVER["DOCUMENT_ROOT"])) {
+            $path = $_SERVER["DOCUMENT_ROOT"] . $path;
+        }
+        if(str_contains($path,"view")) return;
+        
         $content = scandir($path);
 
         foreach ($content as $item) {
@@ -23,6 +28,7 @@ class ClassLoader {
     }
 
     public static function getClasses(string $pathClasses): array {
+        $pathClasses = $_SERVER["DOCUMENT_ROOT"] . $pathClasses;
         $allClasses = get_declared_classes();
         return array_filter($allClasses, function($class) use ($pathClasses) {
             $reflection = new ReflectionClass($class);

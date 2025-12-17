@@ -16,8 +16,6 @@ class Repository {
 
     private QueryBuilder $queryBuilder;
 
-    private PDO $pdo;
-
     public function __construct(string $classModel) {
         $this->table = "";
         $class = new ReflectionClass($classModel);
@@ -26,27 +24,35 @@ class Repository {
         );
 
         $this->queryBuilder = new QueryBuilder($this->table);
-
     }
 
     public function run(): void {
         
     }
 
-    public function startTransaction(): void {
-        $this->pdo->beginTransaction();
-    }
-
-    public function commit(): void {
-        $this->pdo->commit();
-    }
-
-    public function rollback(): void {
-        $this->pdo->rollBack();
-    }
-
-    public function select(array $collumns): QueryBuilder {
+    public function select(array $collumns): SelectBuilder {
         return $this->queryBuilder->select($collumns);
+    }
+
+    public function insert(array $collumns): InsertBuilder {
+        return $this->queryBuilder->insert($collumns);
+    }
+
+    public function update(array $collumns): UpdateBuilder {
+        return $this->queryBuilder->update($collumns);
+    }
+
+    public function delete(array $collumns): DeleteBuilder {
+        return $this->queryBuilder->delete($collumns);
+    }
+
+    public function __call($name, $arguments) {
+        if (method_exists($this, $name) && in_array($name, ["select", "insert", "update", "delete"])) {
+            
+            $result = call_user_func_array([$this, $name], $arguments);
+            echo $result;
+            return $result;
+        }
     }
 
     private function isModel(ReflectionClass $class, string &$table = ""): bool {

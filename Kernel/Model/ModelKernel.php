@@ -29,24 +29,17 @@ class ModelKernel implements Kernable {
     }
 
     public function run(): void {
-        $pathModel = $_SERVER["DOCUMENT_ROOT"] . "/App/Model";
-        $pathRepository = $_SERVER["DOCUMENT_ROOT"] . "/App/Repository";
-
-        ClassLoader::load($pathModel);
-        ClassLoader::load($pathRepository);
         
-        $modelClasses = ClassLoader::getClasses($pathModel);
+        $modelClasses = ClassLoader::getClasses("/app/model");
 
         $tables = $this->interpret($modelClasses);
-        echo "<pre>";
-        print_r($tables);
-        die;
         $this->sortTables($tables);
         $this->buildSQLs($tables);
     } 
 
     private function interpret(array $modelClasses) {
         $tables = [];
+        if(empty($modelClasses)) return $tables;
         foreach ($modelClasses as $className) {
             $class = new ReflectionClass($className);
             $table = "";
@@ -106,6 +99,7 @@ class ModelKernel implements Kernable {
     }
 
     private function sortTables(array &$tables) {
+        if(empty($tables)) return;
         for($i = 0; $i < count($tables); $i++) {
             $table_fk = "";
             foreach($tables[$i]->collumns as $i_collumn) {
@@ -129,6 +123,7 @@ class ModelKernel implements Kernable {
     }
 
     private function buildSQLs(array $tables) {
+        if(empty($tables)) return;
         $sql = "";
         foreach($tables as $table) {
             $sql .= "\nCREATE TABLE IF NOT EXISTS $table->table (";
@@ -194,7 +189,7 @@ class ModelKernel implements Kernable {
         return false;
     }
 
-    private function isCollumn(ReflectionProperty $prop, string &$name = "", mixed &$default_value): bool {
+    private function isCollumn(ReflectionProperty $prop, string &$name, mixed &$default_value): bool {
         $prop_atributes = $prop->getAttributes(Collumn::class);
         foreach($prop_atributes as $attr) {
             if($attr->getName() == Collumn::class) {
