@@ -19,20 +19,36 @@ class QueryBuilder {
         $this->repository = $repository;
     }
 
+    /**
+     * @param array $collumns
+     * @return SelectBuilder
+    */
     public function select(array $columns): SelectBuilder {
         return (new SelectBuilder($this->table, $this->repository))->select($columns);
     }
 
-    public function insert(array $values): InsertBuilder  {
-        return (new InsertBuilder($this->table, $this->repository))->insert($values);
+    /**
+     * @param array $collumns
+     * @return InsertBuilder
+    */
+    public function insert(array $collumns): InsertBuilder  {
+        return (new InsertBuilder($this->table, $this->repository))->insert($collumns);
     }
 
-    public function update(array $values): UpdateBuilder  {
-        return (new UpdateBuilder($this->table, $this->repository))->update($values);
+    /**
+     * @param array $collumns
+     * @return UpdateBuilder
+    */
+    public function update(array $collumns): UpdateBuilder  {
+        return (new UpdateBuilder($this->table, $this->repository))->update($collumns);
     }
 
-    public function delete(array $values): DeleteBuilder {
-        return (new DeleteBuilder($this->table, $this->repository))->delete($values);
+    /**
+     * @param array $collumns
+     * @return DeleteBuilder
+    */
+    public function delete(array $collumns): DeleteBuilder {
+        return (new DeleteBuilder($this->table, $this->repository))->delete($collumns);
     }
 
 }
