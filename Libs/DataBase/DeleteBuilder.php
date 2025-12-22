@@ -4,11 +4,16 @@ namespace Framework\Libs\DataBase;
 
 class DeleteBuilder extends Builder {
 
-    public function __construct(string $table) {
-        parent::__construct($table);
-    }
-
+    /**
+     * @param array $columns ["column" => "value"]
+    */
     public function delete(array $columns): self {
+        $this->query = "DELETE FROM {$this->table} WHERE ";
+        $cols = [];
+        foreach($columns as $key => $value) {
+            $cols[] = "$key = $value";
+        }
+        $this->query .= implode(" AND ", $cols);
         return $this;
     }
 

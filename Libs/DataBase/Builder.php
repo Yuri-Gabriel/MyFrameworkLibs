@@ -3,15 +3,30 @@
 namespace Framework\Libs\DataBase;
 
 abstract class Builder {
+    /** @var string $query */
     protected string $query;
-    protected string $table;
 
-    public function __construct(string $table) {
+    /** @var string $table */
+    protected $table;
+
+    /** @var Repository $repository */
+    private $repository;
+    
+    /**
+     * @param string $table
+     * @param Repository $repository
+    */
+    public function __construct($table, $repository) {
         $this->query = "";
         $this->table = $table;
+        $this->repository = $repository;
     }
 
-    public function getQuery(): string {
+    public function getQuery() {
         return $this->query;
+    }
+
+    public function run() {
+        $this->repository->run($this->query);
     }
 }

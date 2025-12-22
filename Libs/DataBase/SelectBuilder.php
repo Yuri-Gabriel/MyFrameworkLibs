@@ -4,10 +4,6 @@ namespace Framework\Libs\DataBase;
 
 class SelectBuilder extends Builder {
 
-    public function __construct(string $table) {
-        parent::__construct($table);
-    }
-
     public function select(array $columns): self {
         $this->query .= " SELECT ";
         for($i = 0; $i < count($columns); $i++) {

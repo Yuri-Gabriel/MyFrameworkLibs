@@ -4,11 +4,19 @@ namespace Framework\Libs\DataBase;
 
 class InsertBuilder extends Builder {
 
-    public function __construct(string $table) {
-        parent::__construct($table);
-    }
-
+    /**
+     * @param array $columns ["column" => "value"]
+    */
     public function insert(array $columns): self {
+        $col = [];
+        $val = [];
+        foreach($columns as $key => $value) {
+            $col[] = $key;
+            $val[] = $value;
+        }
+        $this->query =
+            "INSERT INTO {$this->table} (" . implode(", ", $col) . ") VALUES (" . implode(", ", $val) . ")"
+        ; 
         return $this;
     }
 

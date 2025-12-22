@@ -2,20 +2,16 @@
 
 namespace Framework\Libs\DataBase;
 
-class UpdateBuilder {
-    private string $query;
-    private string $table;
+class UpdateBuilder extends Builder {
 
-    public function __construct(string $table) {
-        $this->query = "";
-        $this->table = $table;
-    }
-
-    public function get(): string {
-        return $this->query;
-    }
-
+    /**
+     * @param array $columns ["column" => "value"]
+    */
     public function update(array $columns): self {
+        $this->query = "UPDATE {$this->table} SET ";
+        foreach($columns as $key => $value) {
+            $this->query .= "$key = $value";
+        }
         return $this;
     }
 

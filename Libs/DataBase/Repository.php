@@ -23,11 +23,15 @@ class Repository {
             "The class $classModel don't is a model"
         );
 
-        $this->queryBuilder = new QueryBuilder($this->table);
+        $this->queryBuilder = new QueryBuilder($this->table, $this);
     }
 
-    public function run(): void {
-        
+    /**
+     * @param string $query
+    */
+    public function run($query): void {
+        echo "Rodando a query <br>";
+        echo $query;
     }
 
     public function select(array $collumns): SelectBuilder {
@@ -54,6 +58,7 @@ class Repository {
             return $result;
         }
     }
+
 
     private function isModel(ReflectionClass $class, string &$table = ""): bool {
         $class_atributes = $class->getAttributes(Model::class);
