@@ -1,6 +1,6 @@
 <?php
 
-namespace Framework\Libs\DataBase;
+namespace Framework\Libs\DataBase\Query;
 
 class SelectBuilder extends Builder {
 
@@ -44,6 +44,9 @@ class SelectBuilder extends Builder {
         if(!str_contains($this->query, "ORDER BY")) {
             $this->query .= " \nORDER BY ";
         }
+        if(str_contains($this->query, " DESC ") || str_contains($this->query, " ASC ")) {
+            $this->query .= ",";
+        }
         $this->query .= " $collumn ASC ";
         return $this;
     }
@@ -51,6 +54,9 @@ class SelectBuilder extends Builder {
     public function orderByDESC(string $collumn): self {
         if(!str_contains($this->query, "ORDER BY")) {
             $this->query .= " \nORDER BY ";
+        }
+        if(str_contains($this->query, " DESC ") || str_contains($this->query, " ASC ")) {
+            $this->query .= ",";
         }
         $this->query .= " $collumn DESC ";
         return $this;

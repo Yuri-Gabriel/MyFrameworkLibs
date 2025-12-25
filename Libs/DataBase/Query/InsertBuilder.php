@@ -1,6 +1,6 @@
 <?php
 
-namespace Framework\Libs\DataBase;
+namespace Framework\Libs\DataBase\Query;
 
 class InsertBuilder extends Builder {
 
@@ -12,7 +12,7 @@ class InsertBuilder extends Builder {
         $val = [];
         foreach($columns as $key => $value) {
             $col[] = $key;
-            $val[] = $value;
+            $val[] = "'$value'";
         }
         $this->query =
             "INSERT INTO {$this->table} (" . implode(", ", $col) . ") VALUES (" . implode(", ", $val) . ")"

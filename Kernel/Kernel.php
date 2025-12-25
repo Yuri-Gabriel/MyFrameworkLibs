@@ -16,7 +16,7 @@ class Kernel {
         ClassLoader::load("/app");
 
         $this->kernels = [
-            //ModelKernel::class,
+            ModelKernel::class,
             RoutesKernel::class
         ];
     }

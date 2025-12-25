@@ -2,13 +2,17 @@
 
 namespace Framework\Libs\DataBase;
 
-use Exception;
 use Framework\Libs\Exception\DataBaseException;
-use ReflectionClass;
-use Framework\Libs\Annotations\DataBase\Model;
 
-use PDO;
-use PDOException;
+use Framework\Libs\Annotations\DataBase\Model;
+use Framework\Libs\DataBase\Query\DeleteBuilder;
+use Framework\Libs\DataBase\Query\InsertBuilder;
+use Framework\Libs\DataBase\Query\QueryBuilder;
+use Framework\Libs\DataBase\Query\SelectBuilder;
+use Framework\Libs\DataBase\Query\UpdateBuilder;
+
+use ReflectionClass;
+
 
 class Repository {
     /** @var string $table */
@@ -17,8 +21,8 @@ class Repository {
     /** @var QueryBuilder $queryBuilder */
     private $queryBuilder;
 
-    /** @var PDO $pdo */
-    private $pdo;
+    /** @var Conection $conn */
+    private $conn;
 
     /**
      * @param string $classModel
@@ -29,18 +33,8 @@ class Repository {
             "The class $classModel don't is a model"
         );
 
-        $this->table = "";
         $this->queryBuilder = new QueryBuilder($this->table, $this);
-        try {
-            $this->pdo = new PDO("", "", "");
-            $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        } catch (PDOException $errPDO) {
-
-        } catch (Exception $err) {
-            
-        }
-        
-
+        $this->conn = new Conection();
     }
 
     /**
@@ -48,9 +42,7 @@ class Repository {
      * @return array
     */
     public function run($query) {
-        $stmt = $this->pdo->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $this->conn->run($query);
     }
 
     /**

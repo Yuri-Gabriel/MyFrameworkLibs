@@ -1,6 +1,6 @@
 <?php
 
-namespace Framework\Libs\DataBase;
+namespace Framework\Libs\DataBase\Query;
 
 class DeleteBuilder extends Builder {
 

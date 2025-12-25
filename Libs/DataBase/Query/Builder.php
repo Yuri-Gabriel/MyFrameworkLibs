@@ -1,6 +1,8 @@
 <?php
 
-namespace Framework\Libs\DataBase;
+namespace Framework\Libs\DataBase\Query;
+
+use Framework\Libs\DataBase\Repository;
 
 abstract class Builder {
     /** @var string $query */
@@ -27,6 +29,6 @@ abstract class Builder {
     }
 
     public function run() {
-        $this->repository->run($this->query);
+        return $this->repository->run($this->query);
     }
 }

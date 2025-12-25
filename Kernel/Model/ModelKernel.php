@@ -10,6 +10,7 @@ use Framework\Libs\Annotations\DataBase\Collumn;
 use Framework\Libs\Annotations\DataBase\ForeignKey;
 use Framework\Libs\Annotations\DataBase\Nullable;
 use Framework\Libs\Annotations\DataBase\PrimaryKey;
+use Framework\Libs\DataBase\Conection;
 use Framework\Libs\Exception\ModelException;
 
 use ReflectionClass;
@@ -17,7 +18,12 @@ use ReflectionProperty;
 
 class ModelKernel implements Kernable {
 
-    private array $types;
+    /** @var array $types */
+    private $types;
+
+    /** @var Conection $conn */
+    private $conn;
+
     public function __construct() {
         $this->types = [
             "int" => "INTEGER",
@@ -26,6 +32,8 @@ class ModelKernel implements Kernable {
             "float" => "FLOAT",
             "array" => "JSON"
         ];
+
+        $this->conn = new Conection();
     }
 
     public function run(): void {
@@ -34,7 +42,9 @@ class ModelKernel implements Kernable {
 
         $tables = $this->interpret($modelClasses);
         $this->sortTables($tables);
-        $this->buildSQLs($tables);
+        $sql = $this->buildSQLs($tables);
+        //echo "<pre>$sql";die;
+        $this->conn->run($sql);
     } 
 
     private function interpret(array $modelClasses) {
@@ -123,10 +133,11 @@ class ModelKernel implements Kernable {
     }
 
     private function buildSQLs(array $tables) {
-        if(empty($tables)) return;
+        if(empty($tables)) return "";
         $sql = "";
         foreach($tables as $table) {
             $sql .= "\nCREATE TABLE IF NOT EXISTS $table->table (";
+            $collumns = [];
             foreach($table->collumns as $collumn) {
                 $name = $collumn->name;
                 $type = $collumn->type;
@@ -135,22 +146,21 @@ class ModelKernel implements Kernable {
                     $autoincrement = $collumn->pk->autoincrement ? "AUTO_INCREMENT" : "";
                     $pk = "$autoincrement PRIMARY KEY";
                 }
-                $sql .= "\n\t$name $type $pk";
+                $collumns[] = "\n\t$name $type $pk";
                 
                 if($collumn->fk) {
                     $other_table_name = $collumn->fk->other_table;
                     $from_collumn = $collumn->fk->from_collumn;
                     $to_collumn = $collumn->fk->to_collumn;
                     $delete_cascade = $collumn->fk->delete_cascade ? "ON DELETE CASCADE" : "";
-                    $sql .= "\n\tFOREIGN KEY ($from_collumn) REFERENCES $other_table_name($to_collumn) $delete_cascade";
+                    $collumns[] = "\n\tCONSTRAINT fk_{$table->table}_{$other_table_name} FOREIGN KEY ($from_collumn) REFERENCES $other_table_name($to_collumn) $delete_cascade";
                 }
             }
-            $sql .= "\n)";
+
+            $sql .= implode(",", $collumns) . "\n);";
         }
         
-        echo "<pre>";
-        echo $sql;
-        die;
+       return $sql;
     }
 
     private function isForeignKey(ReflectionProperty $prop, string &$other_table, string &$other_table_id, bool &$delete_cascade): bool {

@@ -1,6 +1,8 @@
 <?php
 
-namespace Framework\Libs\DataBase;
+namespace Framework\Libs\DataBase\Query;
+
+use Framework\Libs\DataBase\Repository;
 
 class QueryBuilder {
 
