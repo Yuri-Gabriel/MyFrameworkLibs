@@ -2,7 +2,8 @@
 
 namespace Framework\Kernel\Command;
 
-use Framework\Libs\Exception\InputException;
+use Framework\Kernel\Kernel;
+use Framework\Kernel\Model\ModelKernel;
 
 class Run implements Inputable {
     private array $args;
@@ -27,6 +28,8 @@ class Run implements Inputable {
         foreach($this->params as $param) {
             $command .= $param;
         }
+
+        Kernel::getInstance()->startKernel(ModelKernel::class);
 
         exec($command);
     }

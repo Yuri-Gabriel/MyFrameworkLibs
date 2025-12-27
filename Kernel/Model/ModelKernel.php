@@ -37,15 +37,22 @@ class ModelKernel implements Kernable {
     }
 
     public function run(): void {
+
+        if(!$this->conn->connected) return;
         
         $modelClasses = ClassLoader::getClasses("/app/model");
 
         $tables = $this->interpret($modelClasses);
         $this->sortTables($tables);
         $sql = $this->buildSQLs($tables);
-        //echo "<pre>$sql";die;
+
+        
         $this->conn->run($sql);
     } 
+
+    private function createTables($sql) {
+
+    }
 
     private function interpret(array $modelClasses) {
         $tables = [];

@@ -6,8 +6,9 @@ use ReflectionClass;
 
 class ClassLoader {
     public static function load(string $path) {
-        if(!str_contains($path,$_SERVER["DOCUMENT_ROOT"])) {
-            $path = $_SERVER["DOCUMENT_ROOT"] . $path;
+        $rootPath = dirname(__DIR__, 4);
+        if(!str_contains($path,$rootPath)) {
+            $path = $rootPath . $path;
         }
         if(str_contains($path,"view")) return;
         

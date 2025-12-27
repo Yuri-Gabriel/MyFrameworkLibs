@@ -11,7 +11,11 @@ class Kernel {
 
     /** @var array<Kernable> */
     private array $kernels;
-    public function __construct() {
+
+    /** @var Kernel $instance */
+    private static $instance;
+
+    private function __construct() {
 
         ClassLoader::load("/app");
 
@@ -21,11 +25,16 @@ class Kernel {
         ];
     }
 
-    public function start(): void {
-        foreach($this->kernels as $kernel) {
-            $class = new ReflectionClass($kernel);
-            $instance = $class->newInstance();
-            $instance->run();
+    public static function getInstance() : self {
+        if (!isset(self::$instance)) {
+            self::$instance = new self();
         }
+        return self::$instance;
+    }
+
+    public function startKernel(string $kernelClass): void {
+        $class = new ReflectionClass($kernelClass);
+        $instance = $class->newInstance();
+        $instance->run();
     }
 }

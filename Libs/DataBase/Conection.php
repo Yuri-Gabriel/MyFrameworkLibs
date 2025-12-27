@@ -10,7 +10,10 @@ use PDOException;
 class Conection {
 
     /** @var PDO $pdo */
-    private $pdo;
+    private PDO $pdo;
+
+    /** @var bool $connected */
+    public bool $connected;
 
     public function __construct() {
 
@@ -23,13 +26,15 @@ class Conection {
                 $_ENV["DB_PASSWORD"],
             );
             $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $this->connected = true;
             return;
         } catch (PDOException $errPDO) {
             echo $errPDO->getMessage();
         } catch (Exception $err) {
             echo $err->getMessage();
         }
-        die;
+        echo "\n";
+        $this->connected = false;
     }
 
     /**
