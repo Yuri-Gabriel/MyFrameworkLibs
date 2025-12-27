@@ -1,6 +1,6 @@
 <?php
 
-namespace Framework\Libs\Http\Annotations;
+namespace Framework\Libs\Annotations;
 
 use Attribute;
 
